@@ -1,0 +1,23 @@
+{
+  "name": "domaine-de-pipangaille-scraper",
+  "version": "1.0.0",
+  "description": "Scraper pour récupérer les informations des clients séjournant au Domaine de Pipangaille",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "scrape": "node src/index.js"
+  },
+  "keywords": [
+    "scraping",
+    "amenitiz",
+    "puppeteer"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "puppeteer": "^24.35.0",
+    "puppeteer-core": "^24.35.0"
+  }
+}
