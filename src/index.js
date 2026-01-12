@@ -32,7 +32,7 @@ class AmenitizScraper {
         output: process.stdout
       });
 
-      rl.question('🔐 Code 2FA reçu par email : ', (code) => {
+      rl.question('🔐 2FA code received by email: ', (code) => {
         rl.close();
         resolve(code.trim());
       });
@@ -40,7 +40,7 @@ class AmenitizScraper {
   }
 
   async initialize() {
-    console.log('🚀 Initialisation du scraper...');
+    console.log('🚀 Initializing scraper...');
     
     if (process.env.SCREENSHOT === 'true' && !fs.existsSync(SCREENSHOT_DIR)) {
       fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
@@ -59,31 +59,31 @@ class AmenitizScraper {
   }
 
   async login() {
-    console.log('🔐 Connexion à Amenitiz...');
+    console.log('🔐 Logging in to Amenitiz...');
     
     const { AMENITIZ_EMAIL: email, AMENITIZ_PASSWORD: password } = process.env;
 
     if (!email || !password) {
-      throw new Error('Les credentials AMENITIZ_EMAIL et AMENITIZ_PASSWORD doivent être définis dans le fichier .env');
+      throw new Error('AMENITIZ_EMAIL and AMENITIZ_PASSWORD must be defined in .env file');
     }
 
     await this.page.goto(AMENITIZ_LOGIN_URL, { waitUntil: 'networkidle2' });
     
-    // Tentative de restauration de session
+    // Try to restore session
     if (await this.sessionManager.loadCookies(this.page)) {
-      console.log('🔄 Tentative de connexion avec la session sauvegardée...');
+      console.log('🔄 Attempting login with saved session...');
       await this.page.reload({ waitUntil: 'networkidle2' });
       
       if (await this.checkIfLoggedIn()) {
-        console.log('✅ Session restaurée avec succès');
+        console.log('✅ Session restored successfully');
         return;
       }
       
-      console.log('⚠️  Session expirée, connexion manuelle nécessaire');
+      console.log('⚠️  Session expired, manual login required');
       this.sessionManager.clearSession();
     }
     
-    // Connexion manuelle
+    // Manual login
     await this.page.waitForSelector('input[type="email"], input[name="email"]', { timeout: 10000 });
     
     const emailInput = await this.page.$('input[type="email"], input[name="email"]');
@@ -102,14 +102,14 @@ class AmenitizScraper {
     await this.delay(2000);
     await this.screenshot('2-after-login.png');
 
-    // Gestion 2FA
+    // 2FA handling
     if (await this.check2FARequired()) {
-      console.log('🔐 Authentification à deux facteurs requise');
+      console.log('🔐 Two-factor authentication required');
       const code = await this.promptFor2FACode();
       await this.submit2FACode(code);
     }
 
-    console.log('✅ Connexion réussie');
+    console.log('✅ Login successful');
     await this.sessionManager.saveCookies(this.page);
     await this.screenshot('3-dashboard.png');
   }
@@ -128,7 +128,7 @@ class AmenitizScraper {
 
     for (const selector of selectors) {
       if (await this.page.$(selector)) {
-        console.log(`ℹ️  Champ 2FA détecté: ${selector}`);
+        console.log(`ℹ️  2FA field detected: ${selector}`);
         return true;
       }
     }
@@ -138,10 +138,10 @@ class AmenitizScraper {
   }
 
   async submit2FACode(code) {
-    console.log(`🔐 Saisie du code 2FA: ${code}`);
+    console.log(`🔐 Entering 2FA code: ${code}`);
     
     const codeInput = await this.page.$('input[name="code"], input[name="otp"], input[name="token"], input[placeholder*="code"]');
-    if (!codeInput) throw new Error('Impossible de trouver le champ de saisie du code 2FA');
+    if (!codeInput) throw new Error('Unable to find 2FA code input field');
 
     await codeInput.type(code, { delay: 100 });
     await this.screenshot('2b-2fa-code.png');
@@ -167,38 +167,38 @@ class AmenitizScraper {
         submitButton.click()
       ]);
     } else {
-      console.log('ℹ️  Bouton non trouvé, utilisation de la touche Entrée');
+      console.log('ℹ️  Button not found, using Enter key');
       await codeInput.press('Enter');
       await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
     }
 
     await this.delay(2000);
-    console.log('✅ Code 2FA validé');
+    console.log('✅ 2FA code validated');
   }
 
   async getTodayGuests() {
-    console.log('📅 Récupération des clients du jour...');
+    console.log('📅 Fetching today\'s guests...');
     
-    console.log('🔗 Navigation vers la page des arrivées...');
+    console.log('🔗 Navigating to arrivals page...');
     await this.page.goto('https://domaine-de-pipangaille.amenitiz.io/fr/admin/booking-manager/arrivals', { 
       waitUntil: 'networkidle2',
       timeout: 30000
     });
 
-    console.log('⏳ Attente du chargement...');
+    console.log('⏳ Waiting for page to load...');
     await this.delay(3000);
     
     try {
       await this.page.waitForSelector('.check-in-out-card', { timeout: 10000 });
-      console.log('✅ Cartes de réservation détectées');
+      console.log('✅ Booking cards detected');
     } catch (e) {
-      console.log('⚠️  Aucune carte de réservation trouvée');
+      console.log('⚠️  No booking cards found');
     }
     
     await this.delay(2000);
     await this.screenshot('3-arrivals.png');
 
-    console.log('📊 Extraction des données...');
+    console.log('📊 Extracting data...');
     const guests = await this.page.evaluate(() => {
       const results = [];
       const bookingCards = document.querySelectorAll('.check-in-out-card');
@@ -232,10 +232,10 @@ class AmenitizScraper {
         
         if (name) {
           results.push({
-            nom: name,
-            typeChambre: roomType,
-            nombrePersonnes: persons,
-            montantDu: amount,
+            name: name,
+            roomType: roomType,
+            persons: persons,
+            amountDue: amount,
             dates: dates
           });
         }
@@ -244,7 +244,7 @@ class AmenitizScraper {
       return results;
     });
 
-    console.log(`✅ ${guests.length} réservation(s) trouvée(s)`);
+    console.log(`✅ ${guests.length} booking(s) found`);
     return guests;
   }
 
@@ -260,18 +260,18 @@ class AmenitizScraper {
       fs.writeFileSync(filename, JSON.stringify(guests, null, 2));
     } else {
       const content = guests.map(g => 
-        `Nom: ${g.nom} | Chambre: ${g.typeChambre} | Personnes: ${g.nombrePersonnes} | Montant: ${g.montantDu} | Dates: ${g.dates}`
+        `Name: ${g.name} | Room: ${g.roomType} | Persons: ${g.persons} | Amount: ${g.amountDue} | Dates: ${g.dates}`
       ).join('\n');
       fs.writeFileSync(filename, content);
     }
     
-    console.log(`💾 Données exportées vers: ${filename}`);
+    console.log(`💾 Data exported to: ${filename}`);
   }
 
   async close() {
     if (this.browser) {
       await this.browser.close();
-      console.log('👋 Navigateur fermé');
+      console.log('👋 Browser closed');
     }
   }
 
@@ -281,30 +281,30 @@ class AmenitizScraper {
       await this.login();
       const guests = await this.getTodayGuests();
       
-      console.log('\n📋 Clients présents aujourd\'hui:');
+      console.log('\n📋 Today\'s guests:');
       console.log('='.repeat(50));
       
       if (guests.length === 0) {
-        console.log('Aucun client trouvé pour aujourd\'hui');
+        console.log('No guests found for today');
       } else {
         guests.forEach((guest, index) => {
-          console.log(`${index + 1}. ${guest.nom}`);
-          if (guest.typeChambre) console.log(`   Chambre: ${guest.typeChambre}`);
-          if (guest.nombrePersonnes) console.log(`   Personnes: ${guest.nombrePersonnes}`);
-          if (guest.montantDu) console.log(`   Montant dû: ${guest.montantDu}`);
+          console.log(`${index + 1}. ${guest.name}`);
+          if (guest.roomType) console.log(`   Room: ${guest.roomType}`);
+          if (guest.persons) console.log(`   Persons: ${guest.persons}`);
+          if (guest.amountDue) console.log(`   Amount due: ${guest.amountDue}`);
           if (guest.dates) console.log(`   Dates: ${guest.dates}`);
         });
       }
       
       console.log('='.repeat(50));
-      console.log(`\nTotal: ${guests.length} client(s)\n`);
+      console.log(`\nTotal: ${guests.length} guest(s)\n`);
       
       await this.exportData(guests, 'json');
       await this.exportData(guests, 'txt');
       
       return guests;
     } catch (error) {
-      console.error('❌ Erreur:', error.message);
+      console.error('❌ Error:', error.message);
       await this.screenshot('error.png');
       throw error;
     } finally {
@@ -313,14 +313,13 @@ class AmenitizScraper {
   }
 }
 
-// Exécution
 const scraper = new AmenitizScraper();
 scraper.run()
   .then(guests => {
-    console.log('✅ Scraping terminé avec succès');
+    console.log('✅ Scraping completed successfully');
     process.exit(0);
   })
   .catch(error => {
-    console.error('❌ Échec du scraping:', error);
+    console.error('❌ Scraping failed:', error);
     process.exit(1);
   });

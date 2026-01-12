@@ -1,226 +1,217 @@
-# Domaine de Pipangaille - Scraper de Réservations
+# Domaine de Pipangaille - Booking Scraper
 
-Outil de scraping pour récupérer automatiquement les informations des clients séjournant actuellement au Domaine de Pipangaille via la plateforme Amenitiz.
+Automated scraping tool to retrieve guest information currently staying at Domaine de Pipangaille via the Amenitiz platform.
 
-## 📋 Fonctionnalités
+## 📋 Features
 
-- ✅ Connexion automatique au dashboard Amenitiz
-- ✅ **Gestion de l'authentification à deux facteurs (2FA)**
-- ✅ **Session persistante pour éviter la 2FA à chaque exécution**
-- ✅ Récupération des clients présents à la date actuelle
-- ✅ Export des données en JSON et TXT
-- ✅ Captures d'écran optionnelles pour debug
-- ✅ Mode headless ou avec interface
+- ✅ Automatic login to Amenitiz dashboard
+- ✅ **Two-factor authentication (2FA) handling**
+- ✅ **Persistent session to avoid 2FA on every run**
+- ✅ Retrieval of current guests from arrivals page
+- ✅ Export data in JSON and TXT formats
+- ✅ Optional screenshots for debugging
+- ✅ Headless or visible browser mode
+- ✅ Optimized and clean codebase
 
 ## 🚀 Installation
 
-1. **Cloner ou préparer le projet**
+1. **Navigate to the project**
    ```bash
    cd domaine-de-pipangaille-rooms-scraping
    ```
 
-2. **Installer les dépendances**
+2. **Install dependencies**
    ```bash
    npm install
    ```
 
-3. **Configurer les credentials**
+3. **Configure credentials**
    
-   Copier le fichier d'exemple :
+   Copy the example file:
    ```bash
    cp .env.example .env
    ```
    
-   Puis éditer `.env` et renseigner vos identifiants Amenitiz :
+   Then edit `.env` and add your Amenitiz credentials:
    ```env
-   AMENITIZ_EMAIL=votre-email@example.com
-   AMENITIZ_PASSWORD=votre-mot-de-passe
-   TWO_FA_CODE=
+   AMENITIZ_EMAIL=your-email@example.com
+   AMENITIZ_PASSWORD=your-password
    HEADLESS=true
    SCREENSHOT=false
    ```
 
-## 🔐 Authentification à deux facteurs (2FA)
+## 🔐 Two-Factor Authentication (2FA)
 
-Le scraper gère automatiquement l'authentification à deux facteurs d'Amenitiz de deux façons :
+The scraper automatically handles Amenitiz's two-factor authentication:
 
-### **Première utilisation** (avec code 2FA)
+### **First Run** (with 2FA code)
 
-Lors de la première connexion, vous devrez fournir le code 2FA reçu par email :
+On the first login, you'll need to provide the 2FA code received by email:
 
-#### Option 1 : Saisie interactive (recommandée)
-Lancez simplement le script, il vous demandera le code :
 ```bash
 npm start
-# Le script affichera : "🔐 Code 2FA reçu par email : "
-# Entrez le code reçu (ex: 687999)
+# The script will prompt: "🔐 2FA code received by email: "
+# Enter the code (e.g., 687999)
 ```
 
-#### Option 2 : Via le fichier .env
-Ajoutez temporairement le code dans `.env` :
-```env
-TWO_FA_CODE=687999
-```
-Puis lancez le script. **N'oubliez pas de retirer le code après** !
+### **Subsequent Runs** (without 2FA code)
 
-### **Utilisations suivantes** (sans code 2FA)
+After the first successful login:
+- ✅ The session is **automatically saved** in `session/cookies.json`
+- ✅ Next executions will **reuse this session**
+- ✅ **No new 2FA code will be requested** as long as the session is valid
 
-Après la première connexion réussie :
-- ✅ La session est **sauvegardée automatiquement** dans `session/cookies.json`
-- ✅ Les prochaines exécutions **réutiliseront cette session**
-- ✅ **Aucun nouveau code 2FA ne sera demandé** tant que la session est valide
+The session remains valid for several days/weeks depending on Amenitiz's configuration.
 
-La session reste valide pendant plusieurs jours/semaines selon la configuration d'Amenitiz.
+### Session Management
 
-### Gestion de la session
-
-Si la session expire ou si vous souhaitez vous reconnecter :
+If the session expires or you want to reconnect:
 ```bash
-# Supprimer la session sauvegardée
+# Delete the saved session
 rm -rf session/
 
-# Puis relancer le script (un nouveau code 2FA sera demandé)
+# Then run the script again (a new 2FA code will be requested)
 npm start
 ```
 
-## 💻 Utilisation
+## 💻 Usage
 
-### Lancer le scraper
+### Run the scraper
 
 ```bash
 npm start
 ```
 
-ou
+or
 
 ```bash
 npm run scrape
 ```
 
-### Options de configuration
+### Configuration Options
 
-Dans le fichier `.env` :
+In the `.env` file:
 
-- `AMENITIZ_EMAIL` : Email de connexion à Amenitiz (requis)
-- `AMENITIZ_PASSWORD` : Mot de passe (requis)
-- `TWO_FA_CODE` : Code 2FA (optionnel - si vide, sera demandé interactivement)
-- `HEADLESS` : `true` pour mode invisible, `false` pour voir le navigateur
-- `SCREENSHOT` : `true` pour capturer des screenshots à chaque étape
+- `AMENITIZ_EMAIL`: Amenitiz login email (required)
+- `AMENITIZ_PASSWORD`: Password (required)
+- `HEADLESS`: `true` for invisible mode, `false` to see the browser
+- `SCREENSHOT`: `true` to capture screenshots at each step
 
-## 📂 Résultats
+## 📂 Results
 
-Les données sont exportées dans le dossier `data/` :
+Data is exported to the `data/` folder:
 
-- **Format JSON** : `guests-YYYY-MM-DD.json` - Données structurées
-- **Format TXT** : `guests-YYYY-MM-DD.txt` - Liste simple des clients
+- **JSON format**: `guests-YYYY-MM-DD.json` - Structured data
+- **TXT format**: `guests-YYYY-MM-DD.txt` - Simple guest list
 
-Exemple de sortie JSON :
+Example JSON output:
 ```json
 [
   {
     "name": "Jean Dupont",
-    "checkIn": "12/01/2026",
-    "checkOut": "14/01/2026"
+    "roomType": "Chambre Marocaine",
+    "persons": "2",
+    "amountDue": "0 €",
+    "dates": "12/01/2026 - 14/01/2026"
   }
 ]
 ```
 
+Example TXT output:
+```
+Name: Jean Dupont | Room: Chambre Marocaine | Persons: 2 | Amount: 0 € | Dates: 12/01/2026 - 14/01/2026
+```
+
 ## 🔧 Debug
 
-Pour déboguer le scraper :
+To debug the scraper:
 
-1. Activer le mode visuel :
+1. Enable visual mode:
    ```env
    HEADLESS=false
    ```
 
-2. Activer les screenshots :
+2. Enable screenshots:
    ```env
    SCREENSHOT=true
    ```
    
-   Les captures seront sauvegardées dans `screenshots/`
+   Screenshots will be saved in `screenshots/`
 
 ## ⚠️ Important
 
-- **Sécurité** : 
-  - Ne jamais committer le fichier `.env` contenant vos credentials
-  - Ne jamais committer le dossier `session/` contenant les cookies
-  - Les fichiers sensibles sont déjà dans `.gitignore`
-- **Session** : La session sauvegardée permet d'éviter la 2FA mais doit être protégée
-- **Usage** : Cet outil est destiné à un usage personnel/professionnel légitime
-- **Maintenance** : Si Amenitiz modifie son interface, les sélecteurs CSS devront être mis à jour
+- **Security**: 
+  - Never commit the `.env` file containing your credentials
+  - Never commit the `session/` folder containing cookies
+  - Sensitive files are already in `.gitignore`
+- **Session**: The saved session allows bypassing 2FA but must be protected
+- **Usage**: This tool is intended for legitimate personal/professional use
+- **Maintenance**: If Amenitiz modifies its interface, CSS selectors may need to be updated
 
-## 🛠️ Personnalisation
+## 🛠️ Customization
 
-Le fichier principal est `src/index.js`. Les sélecteurs CSS peuvent nécessiter des ajustements selon :
-- La structure HTML d'Amenitiz
-- Le format d'affichage des dates
-- Les classes CSS utilisées
-
-### Ajuster les sélecteurs
-
-Dans la méthode `getTodayGuests()`, modifiez les sélecteurs CSS selon la structure réelle :
-
-```javascript
-const nameElement = element.querySelector('.guest-name, .customer-name, [class*="name"]');
+The main file is [src/index.js](src/index.js). The scraper targets the Amenitiz arrivals page at:
+```
+https://domaine-de-pipangaille.amenitiz.io/fr/admin/booking-manager/arrivals
 ```
 
-## 📝 Structure du projet
+It extracts data from booking cards with the class `.check-in-out-card`:
+- Guest name
+- Room type
+- Number of persons
+- Amount due
+- Check-in/check-out dates
+
+## 📝 Project Structure
 
 ```
 domaine-de-pipangaille-rooms-scraping/
 ├── src/
-│   ├── index.js          # Script principal
-│   └── SessionManager.js # Gestion de la session persistante
-├── data/                 # Dossier des exports (généré)
-├── screenshots/          # Captures d'écran (généré si activé)
-├── session/              # Session sauvegardée (généré après première connexion)
-├── .env                  # Configuration (à créer)
-├── .env.example          # Exemple de configuration
+│   ├── index.js          # Main script (optimized)
+│   └── SessionManager.js # Persistent session management
+├── data/                 # Export folder (generated)
+├── screenshots/          # Screenshots (generated if enabled)
+├── session/              # Saved session (generated after first login)
+├── .env                  # Configuration (to create)
+├── .env.example          # Configuration example
 ├── .gitignore
 ├── package.json
 └── README.md
 ```
 
-## 🐛 Dépannage
+## 🐛 Troubleshooting
 
-### Le scraper ne trouve pas les clients
+### Scraper doesn't find guests
 
-1. Vérifier que les credentials sont corrects
-2. Activer `HEADLESS=false` et `SCREENSHOT=true` pour voir ce qui se passe
-3. Vérifier les sélecteurs CSS dans le code
-4. Consulter les screenshots générés
+1. Check that credentials are correct
+2. Enable `HEADLESS=false` and `SCREENSHOT=true` to see what's happening
+3. Check the generated screenshots
 
-### Erreur de connexion
+### Login error
 
-- Vérifier l'URL du dashboard Amenitiz
-- Vérifier que vos identifiants sont valides
-- Vérifier votre connexion internet
+- Verify the Amenitiz dashboard URL
+- Verify your credentials are valid
+- Check your internet connection
 
-### Problème avec la 2FA
+### 2FA issues
 
-**Code 2FA non accepté :**
-- Vérifier que vous avez bien entré le code complet (généralement 6 chiffres)
-- Le code a une durée de validité limitée, demander un nouveau code si nécessaire
-- Activer `HEADLESS=false` et `SCREENSHOT=true` pour voir l'interface
+**2FA code not accepted:**
+- Verify you entered the complete code (usually 6 digits)
+- The code has a limited validity, request a new code if necessary
+- Enable `HEADLESS=false` and `SCREENSHOT=true` to see the interface
 
-**Session expirée :**
+**Session expired:**
 ```bash
-# Supprimer la session et recommencer
+# Delete the session and start over
 rm -rf session/
 npm start
 ```
 
-**Le scraper redemande toujours la 2FA :**
-- Vérifier que le dossier `session/` a bien été créé
-- Vérifier les permissions d'écriture du dossier
-- Consulter les logs pour voir si la session a bien été sauvegardée
+**Scraper always requests 2FA:**
+- Check that the `session/` folder was created
+- Check folder write permissions
+- Review logs to see if the session was saved successfully
 
 ## 📄 License
 
 ISC
-
-## 👨‍💻 Support
-
-Pour toute question ou amélioration, consulter le code source ou adapter selon vos besoins spécifiques.
