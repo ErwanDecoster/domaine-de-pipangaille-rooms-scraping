@@ -166,6 +166,7 @@ In the `.env` file:
 - `HEADLESS`: `true` for invisible mode, `false` to see the browser
 - `SCREENSHOT`: `true` to capture screenshots at each step
 - `PORT`: API server port (default: 3000)
+- `DATA_RETENTION_DAYS`: Keep exported files for N days, older files are automatically deleted (default: 7, set to 0 to disable)
 
 ## 📊 Data Format
 
@@ -205,14 +206,11 @@ JSON format: `data/guests-YYYY-MM-DD.json`
 
 TXT format: `data/guests-YYYY-MM-DD.txt`
 ```
-=== Guests for 01/01/2024 ===
-
-1. Jean Dupont
-   Room: Chambre Marocaine
-   Persons: 2
-   Amount Due: 0 €
-   Dates: 12/01/2026 - 14/01/2026
+Name: Jean Dupont | Room: Chambre Marocaine | Persons: 2 | Amount: 0 € | Dates: 12/01/2026 - 14/01/2026
 ```
+
+**Automatic Cleanup:** Files older than 7 days (configurable via `DATA_RETENTION_DAYS` in `.env`) are automatically deleted each time you run the scraper. Set `DATA_RETENTION_DAYS=0` to disable cleanup.
+
 ## 🔧 Debugging
 
 To debug the scraper:

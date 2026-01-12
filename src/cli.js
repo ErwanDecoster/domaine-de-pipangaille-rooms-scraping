@@ -7,6 +7,8 @@ import { SessionManager } from './SessionManager.js';
 
 const AMENITIZ_LOGIN_URL = 'https://domaine-de-pipangaille.amenitiz.io/fr/admin/dashboard';
 const SCREENSHOT_DIR = './screenshots';
+const DATA_DIR = './data';
+const DATA_RETENTION_DAYS = parseInt(process.env.DATA_RETENTION_DAYS) || 7;
 
 class AmenitizScraper {
   constructor() {
@@ -249,12 +251,13 @@ class AmenitizScraper {
   }
 
   async exportData(guests, format = 'json') {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const dataDir = './data';
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
     
-    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    // Cleanup old files before exporting
+    await this.cleanupOldDataFiles();
 
-    const filename = path.join(dataDir, `guests-${timestamp}.${format === 'json' ? 'json' : 'txt'}`);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = path.join(DATA_DIR, `guests-${timestamp}.${format === 'json' ? 'json' : 'txt'}`);
     
     if (format === 'json') {
       fs.writeFileSync(filename, JSON.stringify(guests, null, 2));
@@ -266,6 +269,35 @@ class AmenitizScraper {
     }
     
     console.log(`💾 Data exported to: ${filename}`);
+  }
+
+  async cleanupOldDataFiles() {
+    try {
+      if (!fs.existsSync(DATA_DIR)) return;
+
+      const files = fs.readdirSync(DATA_DIR);
+      const now = Date.now();
+      const retentionMs = DATA_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+      let deletedCount = 0;
+
+      files.forEach(file => {
+        const filePath = path.join(DATA_DIR, file);
+        const stats = fs.statSync(filePath);
+        const fileAge = now - stats.mtime.getTime();
+
+        if (fileAge > retentionMs) {
+          fs.unlinkSync(filePath);
+          deletedCount++;
+          console.log(`🗑️  Deleted old file: ${file}`);
+        }
+      });
+
+      if (deletedCount > 0) {
+        console.log(`🧹 Cleanup: Removed ${deletedCount} file(s) older than ${DATA_RETENTION_DAYS} day(s)`);
+      }
+    } catch (error) {
+      console.warn(`⚠️  Cleanup failed: ${error.message}`);
+    }
   }
 
   async close() {
