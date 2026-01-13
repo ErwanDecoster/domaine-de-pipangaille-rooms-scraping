@@ -36,6 +36,7 @@ let lastError = null;
 let twoFARequired = false;
 let twoFAResolver = null;
 let twoFATimeoutId = null;
+let autoRefreshDisabled = false;  // Flag to disable auto-refresh until manual intervention
 
 // Refresh interval: 10 minutes
 const REFRESH_INTERVAL = 10 * 60 * 1000;
@@ -105,7 +106,13 @@ async function prompt2FACode(errorMessage = null) {
 /**
  * Fetches fresh data from Amenitiz
  */
-async function refreshData() {
+async function refreshData(isMandatory = false) {
+  // Check if auto-refresh is disabled
+  if (!isMandatory && autoRefreshDisabled) {
+    console.log('[INFO] Auto-refresh is disabled. Use POST /api/refresh to manually trigger a refresh.');
+    return;
+  }
+  
   if (isRefreshing) {
     console.log('[INFO] Refresh already in progress, skipping...');
     return;
@@ -129,6 +136,7 @@ async function refreshData() {
     lastRefreshTime = new Date().toISOString();
     lastRefreshTimestamp = Date.now();
     lastError = null;
+    autoRefreshDisabled = false;   // Re-enable auto-refresh on success
     
     // Clear 2FA state on success
     if (twoFATimeoutId) {
@@ -139,12 +147,23 @@ async function refreshData() {
     twoFAResolver = null;
     
     console.log(`[${lastRefreshTime}] Data refreshed successfully: ${guests.length} guests found`);
+    if (isMandatory) {
+      console.log('[INFO] Auto-refresh has been re-enabled');
+    }
   } catch (error) {
     lastError = {
       message: error.message,
       timestamp: new Date().toISOString()
     };
     console.error(`[${new Date().toISOString()}] Refresh failed: ${error.message}`);
+    
+    // Disable auto-refresh on any failure
+    if (isMandatory) {
+      autoRefreshDisabled = true;
+      console.error('[ERROR] Auto-refresh disabled due to failure. Use POST /api/refresh to retry manually.');
+    } else {
+      autoRefreshDisabled = true;
+    }
     
     // Clear 2FA state on failure
     if (twoFATimeoutId) {
@@ -234,8 +253,10 @@ app.get('/api/status', (req, res) => {
     status: 'running',
     isRefreshing: isRefreshing,
     twoFARequired: twoFARequired,
+    autoRefreshEnabled: !autoRefreshDisabled,
+    autoRefreshStatus: autoRefreshDisabled ? 'disabled (manual refresh required)' : 'enabled',
     lastRefreshTime: lastRefreshTime,
-    nextRefreshIn: getSecondsUntilNextRefresh(),
+    nextRefreshIn: autoRefreshDisabled ? null : getSecondsUntilNextRefresh(),
     cacheStatus: guests ? 'ready' : 'empty',
     guestCount: guests ? guests.length : 0,
     lastError: lastError
@@ -291,8 +312,8 @@ app.post('/api/refresh', async (req, res) => {
     timestamp: new Date().toISOString()
   });
   
-  // Start refresh in background
-  refreshData();
+  // Start refresh in background with mandatory flag to bypass auto-refresh checks
+  refreshData(true);
 });
 
 // Graceful shutdown
