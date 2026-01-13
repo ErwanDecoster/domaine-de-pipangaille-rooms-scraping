@@ -97,29 +97,20 @@ export class ScraperService {
     await this.delay(2000);
     await this.takeScreenshot('2-after-login.png');
 
-    // Handle 2FA with retry logic
-    let twoFAAttempts = 0;
-    const maxTwoFAAttempts = 3;
-    
-    while (await this.check2FARequired() && twoFAAttempts < maxTwoFAAttempts) {
+    // Handle 2FA - single attempt only
+    if (await this.check2FARequired()) {
       if (!twoFACodeProvider) {
         throw new Error('2FA required but no code provider available');
       }
       
-      const code = await twoFACodeProvider(twoFAAttempts > 0 ? `Invalid code. Please try again (${twoFAAttempts}/${maxTwoFAAttempts})` : null);
+      const code = await twoFACodeProvider(null);
       await this.submit2FACode(code);
       
       await this.delay(2000);
-      twoFAAttempts++;
       
       // Check if login was successful
-      if (await this.checkIfLoggedIn()) {
-        break;
-      }
-      
-      // If 2FA is still required and we have attempts left, loop again
-      if (twoFAAttempts >= maxTwoFAAttempts && await this.check2FARequired()) {
-        throw new Error('2FA verification failed after 3 attempts');
+      if (!await this.checkIfLoggedIn()) {
+        throw new Error('2FA verification failed');
       }
     }
 
