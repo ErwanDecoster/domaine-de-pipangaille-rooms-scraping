@@ -1,0 +1,44 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Home Assistant Add-on: Domaine de Pipangaille Guest Manager
+# Runs the Node.js application server
+# ==============================================================================
+
+bashio::log.info "Starting Domaine de Pipangaille Guest Manager..."
+
+# Load configuration from Home Assistant
+AMENITIZ_EMAIL=$(bashio::config 'amenitiz_email')
+AMENITIZ_PASSWORD=$(bashio::config 'amenitiz_password')
+PORT=$(bashio::config 'port')
+HEADLESS=$(bashio::config 'headless')
+SCREENSHOT=$(bashio::config 'screenshot')
+DATA_RETENTION_DAYS=$(bashio::config 'data_retention_days')
+
+# Export environment variables for Node.js
+export AMENITIZ_EMAIL
+export AMENITIZ_PASSWORD
+export PORT
+export HEADLESS
+export SCREENSHOT
+export DATA_RETENTION_DAYS
+export NODE_ENV=production
+export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Log startup info
+bashio::log.info "📧 Email: ${AMENITIZ_EMAIL}"
+bashio::log.info "🔌 Port: ${PORT}"
+bashio::log.info "🖥️  Headless: ${HEADLESS}"
+bashio::log.info "📸 Screenshots: ${SCREENSHOT}"
+bashio::log.info "🗑️  Data retention: ${DATA_RETENTION_DAYS} days"
+
+# Warn if credentials not configured
+if bashio::var.is_empty "${AMENITIZ_EMAIL}" || bashio::var.is_empty "${AMENITIZ_PASSWORD}"; then
+    bashio::log.warning "amenitiz_email and amenitiz_password not configured"
+    bashio::log.warning "The API will start but scraping will fail without credentials"
+fi
+
+# Change to app directory and start the Node.js server
+cd /app || bashio::exit.nok "Could not change to /app directory"
+
+# Execute Node.js server
+exec node src/server.js

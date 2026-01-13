@@ -1,13 +1,13 @@
 ---
 name: Domaine de Pipangaille - Guest Manager
-version: 1.0.0
+version: 1.0.1
 slug: domaine-pipangaille-guest-manager
 description: Retrieve guest information from Amenitiz booking platform with REST
   API for Home Assistant integration
 url: https://github.com/erwandecoster/domaine-de-pipangaille-rooms-scraping
 startup: application
 boot: auto
-init: true
+init: false
 ports:
   3000/tcp: 3000
 ports_description:
@@ -15,8 +15,8 @@ ports_description:
 webui: http://[HOST]:[PORT:3000]/api/status
 watchdog: http://[HOST]:[PORT:3000]/api/health
 options:
-  amenitiz_email: your-email@example.com
-  amenitiz_password: your-password
+  amenitiz_email:
+  amenitiz_password:
   port: 3000
   headless: true
   screenshot: false

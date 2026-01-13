@@ -1,0 +1,10 @@
+#!/usr/bin/execlineb -S0
+# ==============================================================================
+# Home Assistant Add-on: Domaine de Pipangaille Guest Manager
+# Take down the S6 supervision tree when the app fails
+# ==============================================================================
+
+if { s6-test ${1} -ne 0 }
+if { s6-test ${1} -ne 256 }
+
+s6-svscanctl -t /var/run/s6/services

@@ -5,7 +5,6 @@ FROM ${BUILD_FROM}
 RUN apk add --no-cache \
   nodejs \
   npm \
-  jq \
   ca-certificates \
   chromium \
   chromium-chromedriver
@@ -22,19 +21,14 @@ RUN npm install --only=production --no-optional
 # Copy application files
 COPY rootfs/app/src ./src
 
-# Create data directory for session and exports
-RUN mkdir -p /data/session /data/data /data/screenshots
+# Copy s6-overlay configuration
+COPY rootfs/ /
 
-# Copy run script
-COPY run.sh /
-RUN chmod +x /run.sh
-
-# Health check
-HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
-  CMD sh -c "node -e \"const p = process.env.PORT || 3000; require('http').get(\\`http://localhost:${p}/api/health\\`, (r) => { if (r.statusCode !== 200) throw new Error(r.statusCode); }).on('error', (e) => { throw e; });\""
+# Set proper permissions for s6 scripts
+RUN chmod a+x /etc/services.d/guest-manager/run && \
+  chmod a+x /etc/services.d/guest-manager/finish && \
+  chmod a+x /etc/cont-init.d/01-init.sh
 
 # Set environment
 ENV NODE_ENV=production
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-
-CMD ["/run.sh"]

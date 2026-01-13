@@ -1,6 +1,6 @@
 {
   "name": "Domaine de Pipangaille - Guest Manager",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "slug": "domaine-pipangaille-guest-manager",
   "description": "Retrieve guest information from Amenitiz booking platform with REST API for Home Assistant integration",
   "url": "https://github.com/erwandecoster/domaine-de-pipangaille-amenitiz-scraping",

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bashio
 
 config_path="/data/options.json"
 
