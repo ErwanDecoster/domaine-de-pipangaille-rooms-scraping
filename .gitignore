@@ -1,3 +1,5 @@
 rootfs/app/node_modules/
 rootfs/app/package-lock.json
+rootfs/app/src/data/options.json
+rootfs/app/src/data/session/
 .env
