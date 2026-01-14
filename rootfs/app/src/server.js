@@ -37,6 +37,10 @@ let twoFARequired = false;
 let twoFAResolver = null;
 let twoFATimeoutId = null;
 let autoRefreshDisabled = false;  // Flag to disable auto-refresh until manual intervention
+let retryScheduled = null;        // Track scheduled retry attempt
+let retryAttempts = 0;            // Counter for retry attempts
+const MAX_RETRY_ATTEMPTS = 2;     // Maximum retry attempts (5 and 10 min)
+const RETRY_INTERVALS = [5 * 60 * 1000, 10 * 60 * 1000]; // 5 and 10 minutes
 
 // Refresh interval: 10 minutes
 const REFRESH_INTERVAL = 10 * 60 * 1000;
@@ -104,15 +108,32 @@ async function prompt2FACode(errorMessage = null) {
 }
 
 /**
- * Fetches fresh data from Amenitiz
+ * Schedules the next automatic retry after a failure
  */
-async function refreshData(isMandatory = false) {
-  // Check if auto-refresh is disabled
-  if (!isMandatory && autoRefreshDisabled) {
-    console.log('[INFO] Auto-refresh is disabled. Use POST /api/refresh to manually trigger a refresh.');
-    return;
+function scheduleRetry() {
+  // Cancel previous retry if exists
+  if (retryScheduled) {
+    clearTimeout(retryScheduled);
   }
   
+  if (retryAttempts < MAX_RETRY_ATTEMPTS) {
+    const delayMs = RETRY_INTERVALS[retryAttempts];
+    const delayMinutes = delayMs / 60 / 1000;
+    
+    console.log(`[INFO] Scheduling automatic retry #${retryAttempts + 1} in ${delayMinutes} minutes...`);
+    
+    retryScheduled = setTimeout(() => {
+      retryAttempts++;
+      console.log(`[INFO] Attempting automatic retry #${retryAttempts} (${delayMinutes} minutes after failure)...`);
+      refreshData(true);
+    }, delayMs);
+  }
+}
+
+/**
+ * Fetches fresh data from Amenitiz
+ */
+async function refreshData() {
   if (isRefreshing) {
     console.log('[INFO] Refresh already in progress, skipping...');
     return;
@@ -137,6 +158,13 @@ async function refreshData(isMandatory = false) {
     lastRefreshTimestamp = Date.now();
     lastError = null;
     autoRefreshDisabled = false;   // Re-enable auto-refresh on success
+    retryAttempts = 0;             // Reset retry counter on success
+    
+    // Cancel any scheduled retry
+    if (retryScheduled) {
+      clearTimeout(retryScheduled);
+      retryScheduled = null;
+    }
     
     // Clear 2FA state on success
     if (twoFATimeoutId) {
@@ -147,9 +175,6 @@ async function refreshData(isMandatory = false) {
     twoFAResolver = null;
     
     console.log(`[${lastRefreshTime}] Data refreshed successfully: ${guests.length} guests found`);
-    if (isMandatory) {
-      console.log('[INFO] Auto-refresh has been re-enabled');
-    }
   } catch (error) {
     lastError = {
       message: error.message,
@@ -157,10 +182,19 @@ async function refreshData(isMandatory = false) {
     };
     console.error(`[${new Date().toISOString()}] Refresh failed: ${error.message}`);
     
+    // Keep previous data intact (cache is preserved)
+    const currentGuests = cache.get('guests');
+    if (currentGuests) {
+      console.log(`[INFO] Keeping previous data: ${currentGuests.length} guests`);
+    }
+    
     // Disable auto-refresh on any failure
     if (isMandatory) {
       autoRefreshDisabled = true;
       console.error('[ERROR] Auto-refresh disabled due to failure. Use POST /api/refresh to retry manually.');
+      
+      // Schedule automatic retries
+      scheduleRetry();
     } else {
       autoRefreshDisabled = true;
     }
@@ -248,18 +282,34 @@ app.get('/api/rooms', (req, res) => {
  */
 app.get('/api/status', (req, res) => {
   const guests = cache.get('guests');
+  let nextRetryIn = null;
+  
+  if (retryScheduled) {
+    // Calculate time until next retry
+    const now = Date.now();
+    // We don't have the exact scheduled time, so we estimate based on attempts
+    if (retryAttempts < MAX_RETRY_ATTEMPTS) {
+      const delayMs = RETRY_INTERVALS[retryAttempts];
+      nextRetryIn = Math.ceil(delayMs / 1000);
+    }
+  }
   
   res.json({
     status: 'running',
     isRefreshing: isRefreshing,
     twoFARequired: twoFARequired,
-    autoRefreshEnabled: !autoRefreshDisabled,
-    autoRefreshStatus: autoRefreshDisabled ? 'disabled (manual refresh required)' : 'enabled',
     lastRefreshTime: lastRefreshTime,
-    nextRefreshIn: autoRefreshDisabled ? null : getSecondsUntilNextRefresh(),
+    nextRefreshIn: getSecondsUntilNextRefresh(),
     cacheStatus: guests ? 'ready' : 'empty',
     guestCount: guests ? guests.length : 0,
-    lastError: lastError
+    lastError: lastError,
+    retryInfo: retryScheduled ? {
+      scheduled: true,
+      attemptNumber: retryAttempts + 1,
+      maxAttempts: MAX_RETRY_ATTEMPTS,
+      nextRetryIn: nextRetryIn,
+      message: `Automatic retry #${retryAttempts + 1} scheduled in ${Math.ceil(RETRY_INTERVALS[retryAttempts] / 1000 / 60)} minutes`
+    } : null
   });
 });
 
@@ -312,8 +362,8 @@ app.post('/api/refresh', async (req, res) => {
     timestamp: new Date().toISOString()
   });
   
-  // Start refresh in background with mandatory flag to bypass auto-refresh checks
-  refreshData(true);
+  // Start refresh in background
+  refreshData();
 });
 
 // Graceful shutdown
